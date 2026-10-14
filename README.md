@@ -79,14 +79,38 @@ MTI IP는 블록 디자인에 남기되 펌웨어에서 비활성화했습니다
 
 ## 저장소 구조
 
-> **TODO**: 실제 디렉터리 구조에 맞게 수정
+```
+├── go.ps1                       실행 런처 (추적 / 캘리브레이션 / 사전 점검 / 모터 정지 메뉴)
+├── Vitis/                       ★ HLS IP 소스 (C++)
+│   ├── cordic_polar.cpp         CORDIC 극좌표 변환 (AXI4-Lite)
+│   ├── kalman_filter.cpp        칼만 추적 필터 (AXI4-Lite)
+│   └── uln2003_controller.cpp   28BYJ-48 듀얼 스테퍼 구동 (AXI4-Lite 제어 + GPIO 출력)
+├── vivado_project/              ★ Vivado 프로젝트 (PYNQ-Z2, xc7z020)
+│   ├── antidrone.xpr
+│   ├── antidrone_wrapper.xsa    Vitis 플랫폼용 하드웨어 내보내기
+│   └── antidrone.srcs/          블록 디자인(antidrone_bd), 핀 제약(antidrone.xdc, motor_pins.xdc)
+├── antidrone/                   실행 시스템
+│   ├── vitis_workspace/antidrone_app/src/ps_main.cpp
+│   │                            ★ Zynq PS 베어메탈 펌웨어: 레이더 UART 파싱 → CORDIC/Kalman IP → Pan/Tilt PID
+│   ├── cpp/                     호스트 추적 앱 (C++, OpenCV, ONNX Runtime)
+│   │   ├── apps/                ptcamera_tracker(메인), detector_viewer, tracking_viewer, camera_smoke_test
+│   │   └── include/, src/       YOLOv8 검출, ByteTrack 추적, 화면 표시, FPGA 시리얼 통신
+│   ├── unified_gui.py           통합 GUI: 카메라 영상, 레이더 PPI, 텔레메트리, 3D 표시 (UDP 수신, 표시 전용)
+│   ├── run_system.ps1           통합 실행: 비트스트림·ELF 적재, 사전 점검, 추적·캘리브레이션 실행
+│   ├── flash.tcl                XSCT로 비트스트림과 ELF를 보드에 적재
+│   └── models/drone_yolov8x/    YOLOv8x 모델 위치 (가중치 파일은 용량 때문에 저장소에 포함하지 않음)
+├── scripts/
+│   ├── pantilt_calibration/     카메라 내부 파라미터(ChArUco)와 픽셀 → 안테나 평면 좌표 변환 캘리브레이션
+│   ├── build_app.py, build_app.tcl, run_build.bat   PS 펌웨어 빌드 (Vitis 2023.2)
+│   ├── build_win.bat            호스트 C++ 앱 빌드 (Visual Studio Build Tools)
+│   ├── recreate_platform.tcl    XSA에서 Vitis 플랫폼 재생성
+│   └── gui_udp_sim.py           하드웨어 없이 GUI를 시험하는 가상 텔레메트리 송신기
+├── data/                        캘리브레이션 데이터 (ChArUco 보드, 촬영 이미지, camera_intrinsics.yaml)
+├── docs/                        시스템 개요, FPGA 작업 흐름, Pan/Tilt 캘리브레이션, ONNX/CUDA 적용 가이드
+└── legacy/                      현재 파이프라인에서 쓰지 않는 파일 보관 (MTI 서브시스템, 구 PPI 뷰어, OpenVINO 문서 등)
+```
 
-```
-├── fpga/          # Vivado 블록 디자인, HLS IP 소스
-├── firmware/      # Zynq PS 펌웨어 (UART 수신, 융합 판단, PID)
-├── host/          # YOLOv8 + ByteTrack 검출 및 GUI
-└── docs/          # 블록다이어그램, 시연 자료
-```
+★ 표시는 본인 담당(FPGA)입니다.
 
 ## 빌드 및 실행
 
